@@ -28,7 +28,7 @@ tile_bag = [
     *('X' * 1),
     *('Y' * 2),
     *('Z' * 1),
-    '', ''  # blanks (this will add nothing—see below)
+    '?', '?'  # blanks (this will add nothing—see below)
 ]
 
 def gen_tiles(set, tiles):
