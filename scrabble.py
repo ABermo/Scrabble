@@ -1,4 +1,4 @@
-import board
+import py5
 import random
 
 tile_bag = [
@@ -31,14 +31,10 @@ tile_bag = [
     '', ''  # blanks (this will add nothing—see below)
 ]
 
-def rack(player, bag):
-    while len(player) != 7 or len(bag) < 1:
-        index = random.randint(0, len(bag) - 1)
-        player.append(bag[index])
-        bag.pop(index)
+def gen_tiles(set, tiles):
+    while len(set) < 7:
+        index = random.randint(0, len(tiles)-1)
+        set.append(tiles[index])
+        tiles.pop(index)
     
-    player.sort()
-
-player1 = []
-rack(player1,tile_bag)
-print(player1)
+    set.sort()

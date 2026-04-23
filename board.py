@@ -1,15 +1,25 @@
 import py5
+import scrabble
 
 TRIP_WORDS = [1,8,15,106,120,211,218,225]
 DOUB_WORDS = [17,29,33,43,49,57,65,71,113,155,161,169,177,183,193,197,209]
 TRIP_LETTERS = [21,25,77,81,85,89,137,141,145,149,201,205]
 DOUB_LETTERS = [4,12,37,39,46,53,60,93,97,99,103,109,117,123,127,129,133,166,173,180,187,189,214,222]
+player = []
 
 def setup():
-    py5.size(1200,1200)
+    py5.size(1500,1500)
+    py5.text_size(60)
+    py5.background('#000000')
+    
+    scrabble.gen_tiles(player, scrabble.tile_bag)
 
 def draw():
-    py5.background('#000000')
+    board()
+    show_tiles(player)
+    
+   
+def board():
     box = 1
     x = 10
     y = 10
@@ -35,4 +45,18 @@ def draw():
         
         box += 1
     
+def show_tiles(tiles):
+    x = 1000
+    y = 250
+    
+    for box in tiles:
+        py5.fill("#EBB36F")
+        py5.square(x,y,50)
+        
+        py5.fill('#FFFFFF')
+        py5.text(box, x + 5, y + 45)
+        
+        x += 60
+        
+
 py5.run_sketch()
