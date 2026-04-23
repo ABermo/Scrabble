@@ -1,5 +1,6 @@
 import py5
 import scrabble
+import validation
 
 #special tile co-ordinates
 TRIP_WORDS = [1,8,15,106,120,211,218,225]
@@ -105,6 +106,9 @@ def letter_enter(tiles):
                 current_position[current_position.index(1)] = key
                 inuse.append(key)
                 temp_rack.pop(temp_rack.index(key))
+        
+        if py5.key in ("RETURN", "\n"):
+            validation.valid(current_position)
         
         
     
