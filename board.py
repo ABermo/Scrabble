@@ -32,7 +32,7 @@ def setup():
     global temp_rack, original_board
 
     py5.size(1500, 1500)
-    py5.text_size(60)
+    py5.text_size(50)
     py5.background('#000000')
 
     scrabble.gen_tiles(player1, scrabble.tile_bag)
@@ -96,7 +96,6 @@ def show_tiles(tiles):
         x += 60
 
 
-# highlight the selected cell
 def click():
     if py5.is_mouse_pressed:
         x = py5.mouse_x
@@ -123,6 +122,40 @@ def letter_enter(tiles):
     if py5.is_key_pressed:
         key = py5.key.upper()
 
+        # --- Irish vowel shortcuts ---
+        special_map = {
+            '3': 'Á',
+            '4': 'É',
+            '5': 'Í',
+            '6': 'Ó',
+            '7': 'Ú'
+        }
+        if key in special_map:
+            key = special_map[key]
+
+        # --- PASS TURN ---
+        if key == '#':
+            if not enter_lock:
+                enter_lock = True
+
+                moves += 1
+                original_board = current_board.copy()
+
+                # reset temp rack for next player
+                if moves % 2 == 1:
+                    temp_rack = player1.copy()
+                else:
+                    temp_rack = player2.copy()
+
+                # clear highlights and inuse
+                highlight = [0] * 266
+                inuse = []
+
+                print("PASS")
+
+            return
+
+
         # arrow keys (movement)
         if py5.key == py5.CODED:
             if not key_lock:
@@ -137,11 +170,9 @@ def letter_enter(tiles):
             if 1 in highlight and key in temp_rack:
                 pos = highlight.index(1)
 
-                # can't overwrite locked tiles
                 if original_board[pos] not in (0, 1):
                     return
 
-                # if replacing a tile placed this turn
                 if current_board[pos] not in (0, 1):
                     old = current_board[pos]
                     inuse.remove(old)
@@ -151,24 +182,16 @@ def letter_enter(tiles):
                 inuse.append(key)
                 temp_rack.remove(key)
 
-        # --- BACKSPACE removes a tile placed this turn ---
+        # BACKSPACE removes tile placed this turn
         if py5.key == py5.BACKSPACE:
             if 1 in highlight:
                 pos = highlight.index(1)
 
-                # only remove tiles placed THIS turn
                 if current_board[pos] in inuse:
                     removed = current_board[pos]
-
-                    # clear the board square
                     current_board[pos] = 0
-
-                    # return tile to temp rack
                     temp_rack.append(removed)
-
-                    # remove from inuse list
                     inuse.remove(removed)
-
             return
 
         # submitting the move
@@ -178,7 +201,6 @@ def letter_enter(tiles):
 
                 if validation.valid(current_board):
 
-                    # 1. score the move
                     points = scoring.score_move(original_board, current_board)
 
                     if moves % 2 == 1:
@@ -186,26 +208,18 @@ def letter_enter(tiles):
                     else:
                         player2_score += points
 
-                    print(player1_score)
-                    print(player2_score)
-                    # 2. remove used tiles from current player's rack
                     for t in inuse:
                         if t in tiles:
                             tiles.remove(t)
 
-                    # 3. lock in board for next turn
                     original_board = current_board.copy()
-
-                    # 4. switch player
                     moves += 1
 
-                    # 5. reset temp_rack for next player
                     if moves % 2 == 1:
                         temp_rack = player1.copy()
                     else:
                         temp_rack = player2.copy()
 
-                    # 6. reset highlight + inuse
                     highlight = [0] * 266
                     inuse = []
 
@@ -277,7 +291,6 @@ def turns(player):
     if (len(player) < 7) and (len(scrabble.tile_bag) != 0):
         scrabble.gen_tiles(player, scrabble.tile_bag)
 
-    # ensure temp_rack matches current player at start of their turn
     if not inuse:
         if temp_rack != player:
             temp_rack = player.copy()
