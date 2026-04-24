@@ -3,6 +3,11 @@ words = data.read()
 words = words.split('\n')
 
 def valid(board):
+    if board[113] in (0,1):
+        return False
+    
+    
+    
     if single_letter(board) == False:
         print('Free standing Letter')
         return False

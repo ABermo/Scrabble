@@ -15,13 +15,19 @@ inuse = []
 temp_rack = []
 
 #coordiante n = current_position[n]
-current_position = [0] * 226
+original_board = [0] * 266
+current_board = [0] * 266
+highlight = [0] * 266
+
+key_lock = False
 
 def setup():
-    global temp_rack
+    global temp_rack, original_board
     py5.size(1500,1500)
     py5.text_size(60)
     py5.background('#000000')
+    original_board = current_board.copy()
+
     
     scrabble.gen_tiles(player1, scrabble.tile_bag)
     temp_rack = player1.copy()
@@ -38,9 +44,8 @@ def board():
     box = 1
     x = 10
     y = 10
-    
-    #drawing boxes
-    while (box < 226):
+
+    while box < 226:
         if box in TRIP_WORDS:
             py5.fill("#9D0606")
         elif box in DOUB_WORDS:
@@ -51,22 +56,17 @@ def board():
             py5.fill("#39CBEC")
         else:
             py5.fill("#0B762B")
-        py5.square(x,y,50)
-        
-        if current_position[box] == 1:
-            py5.no_fill()
-            py5.stroke("#d7b015")
-            py5.stroke_weight(5)
-            py5.rect(x + 2.5, y + 2.5, 45, 45)
-            py5.no_stroke()
-            
-        if box%15 == 0:
+
+        py5.square(x, y, 50)
+
+        if box % 15 == 0:
             x = 10
             y += 60
         else:
             x += 60
-        
+
         box += 1
+
     
 def show_tiles(tiles):
     x = 1000
@@ -86,50 +86,111 @@ def click():
     if py5.is_mouse_pressed:
         x = py5.mouse_x
         y = py5.mouse_y
-        
-        col = (x//60) + 1
-        row = (y//60)
-        
+
+        col = (x // 60) + 1
+        row = (y // 60)
         pos = row * 15 + col
-        
-        if 1 in current_position:
-            current_position[current_position.index(1)] = 0
-        
-        current_position[pos] = 1
+
+        if pos < 1 or pos > 225:
+            return
+
+        if 1 in highlight:
+            highlight[highlight.index(1)] = 0
+
+        highlight[pos] = 1
+
+
+
             
 def letter_enter(tiles):
+    global key_lock
+    
     if py5.is_key_pressed:
         key = py5.key.upper()
-        
+
+        if py5.key == py5.CODED:
+            if not key_lock:
+                if 1 in highlight:
+                    square = highlight.index(1)
+                    movement(square)
+                key_lock = True
+            return 
+
+
         if key in tiles:
-            if 1 in current_position and key in temp_rack:
-                current_position[current_position.index(1)] = key
+            if 1 in highlight and key in temp_rack:
+                pos = highlight.index(1)
+
+                if original_board[pos] not in (0, 1):
+                    return
+
+                if current_board[pos] not in (0, 1):
+                    old = current_board[pos]
+                    inuse.remove(old)
+                    temp_rack.append(old)
+
+                current_board[pos] = key
                 inuse.append(key)
-                temp_rack.pop(temp_rack.index(key))
-        
+                temp_rack.remove(key)
+
         if py5.key in ("RETURN", "\n"):
-            validation.valid(current_position)
-        
-        
-    
-    key = ''
+            validation.valid(current_board)
+
+
 
 def show_board():
     box = 1
     x = 10
     y = 10
-    
-    while (box < 226):
-        if (current_position[box] != 0) and (current_position[box] != 1):
+
+    while box < 226:
+        if current_board[box] not in (0, 1):
             py5.fill('#FFFFFF')
-            py5.text(current_position[box], x + 5, y + 45)
-        
-        if box%15 == 0:
+            py5.text(current_board[box], x + 5, y + 45)
+
+        if highlight[box] == 1:
+            py5.no_fill()
+            py5.stroke("#d7b015")
+            py5.stroke_weight(5)
+            py5.rect(x + 2.5, y + 2.5, 45, 45)
+            py5.no_stroke()
+
+        if box % 15 == 0:
             x = 10
             y += 60
         else:
             x += 60
-            
+
         box += 1
+
+def movement(square):
+    if py5.key_code == py5.UP:
+        if square < 16:
+            square = 225 - (15 - square)
+        else:
+            square -= 15
+    elif py5.key_code == py5.DOWN:
+        if square > 210:
+            square -= 210
+        else:
+            square += 15
+    elif py5.key_code == py5.LEFT:
+        if square == 1:
+            square = 225
+        else:
+            square -= 1
+    elif py5.key_code == py5.RIGHT:
+        if square == 225:
+            square = 1
+        else:
+            square += 1
+            
+    highlight[highlight.index(1)] = 0
+    highlight[square] = 1
+
+def key_released():
+    global key_lock
+    key_lock = False
+
 
 py5.run_sketch()
