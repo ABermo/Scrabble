@@ -20,6 +20,7 @@ current_board = [0] * 266
 highlight = [0] * 266
 
 key_lock = False
+moves = 1
 
 def setup():
     global temp_rack, original_board
@@ -33,11 +34,13 @@ def setup():
     temp_rack = player1.copy()
 
 def draw():
+    global moves
     board()
-    show_tiles(player1)
-    click()
-    letter_enter(player1)
-    show_board()
+    
+    if moves%2 == 1:
+        turns(player1)
+    else:
+        turns(player2)
     
    
 def board():
@@ -103,7 +106,7 @@ def click():
 
             
 def letter_enter(tiles):
-    global key_lock
+    global key_lock, moves
     
     if py5.is_key_pressed:
         key = py5.key.upper()
@@ -134,7 +137,18 @@ def letter_enter(tiles):
                 temp_rack.remove(key)
 
         if py5.key in ("RETURN", "\n"):
-            validation.valid(current_board)
+            if validation.valid(current_board):
+                for t in inuse:
+                    tiles.remove(t)
+
+                moves += 1
+
+                if moves % 2 == 1:
+                    reset_turn(player1)
+                else:
+                    reset_turn(player2)
+
+
 
 
 
@@ -191,6 +205,25 @@ def movement(square):
 def key_released():
     global key_lock
     key_lock = False
+
+
+
+def turns(player):
+    if (len(player) < 7) and (len(scrabble.tile_bag) != 0):
+        scrabble.gen_tiles(player, scrabble.tile_bag)
+    
+    show_tiles(player)
+    click()
+    letter_enter(player)
+    show_board()
+    
+def reset_turn(player):
+    global original_board, highlight, temp_rack, inuse
+    original_board = current_board.copy()
+    highlight = [0] * 266
+    temp_rack = player.copy()
+    inuse = []
+
 
 
 py5.run_sketch()
