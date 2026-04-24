@@ -103,4 +103,7 @@ def score_move(original_board, current_board):
 
         total_score += word_score * word_multiplier
 
+    if len(new_tiles) == 7:
+        total_score += 50
+        
     return total_score

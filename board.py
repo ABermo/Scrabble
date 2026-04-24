@@ -46,6 +46,7 @@ def draw():
     global moves
 
     board()
+    show_scores()
 
     if moves % 2 == 1:
         turns(player1)
@@ -287,4 +288,17 @@ def turns(player):
     show_board()
 
 
+def show_scores():
+    global player1_score, player2_score
+    
+    py5.fill("#0CAB07")
+    py5.rect(950,10,500,50)
+    py5.fill("#3d10f5")
+    py5.rect(950,60,500,50)
+    
+    py5.fill('#000000')
+    py5.text(player1_score,1175,55)
+    py5.text(player2_score,1175,105)
+    
+    
 py5.run_sketch()
