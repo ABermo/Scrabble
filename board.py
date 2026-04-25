@@ -18,7 +18,7 @@ player2_score = 0
 inuse = []
 temp_rack = []
 
-# coordiante n = current_position[n]
+# coordinate n = current_position[n]
 original_board = [0] * 266
 current_board = [0] * 266
 highlight = [0] * 266
@@ -26,6 +26,10 @@ highlight = [0] * 266
 key_lock = False
 enter_lock = False
 moves = 1
+
+# --- Exchange state ---
+exchange_mode = False   # True when player is picking tiles to exchange
+exchange_tiles = []     # tiles queued up for exchange
 
 
 def setup():
@@ -45,8 +49,10 @@ def setup():
 def draw():
     global moves
 
+    py5.background('#000000')
     board()
     show_scores()
+    show_exchange_status()
 
     if moves % 2 == 1:
         turns(player1)
@@ -87,13 +93,35 @@ def show_tiles(tiles):
     y = 250
 
     for box in tiles:
-        py5.fill("#EBB36F")
+        # highlight tiles queued for exchange in red
+        if exchange_mode and box in exchange_tiles:
+            py5.fill("#CC3300")
+        else:
+            py5.fill("#EBB36F")
         py5.square(x, y, 50)
 
         py5.fill('#FFFFFF')
         py5.text(box, x + 5, y + 45)
 
         x += 60
+
+
+def show_exchange_status():
+    """Show a status line when exchange mode is active."""
+    if not exchange_mode:
+        return
+
+    py5.text_size(35)
+    py5.fill("#CC3300")
+    py5.rect(950, 160, 500, 50)
+    py5.fill('#FFFFFF')
+
+    if exchange_tiles:
+        py5.text("SWAP: " + " ".join(exchange_tiles) + "  (/ confirm)", 960, 196)
+    else:
+        py5.text("Type tiles to swap, / confirm", 960, 196)
+
+    py5.text_size(50)
 
 
 def click():
@@ -115,7 +143,7 @@ def click():
 
 
 def letter_enter(tiles):
-    global key_lock, enter_lock, moves
+    global key_lock, enter_lock, moves, exchange_mode, exchange_tiles
     global player1_score, player2_score
     global temp_rack, original_board, inuse, highlight
 
@@ -133,30 +161,105 @@ def letter_enter(tiles):
         if key in special_map:
             key = special_map[key]
 
-        # --- PASS TURN ---
-        if key == '#':
-            if not enter_lock:
-                enter_lock = True
+        # --- EXCHANGE MODE: toggle on first /, confirm on second / ---
+        if py5.key == '/':
+            if not key_lock:
+                key_lock = True
 
-                moves += 1
-                original_board = current_board.copy()
-
-                # reset temp rack for next player
-                if moves % 2 == 1:
-                    temp_rack = player1.copy()
+                if not exchange_mode:
+                    # Enter exchange mode (only allowed if no tiles on board yet)
+                    if not inuse:
+                        exchange_mode = True
+                        exchange_tiles = []
+                        print("Exchange mode ON – type tiles, press / to confirm, # to cancel")
                 else:
-                    temp_rack = player2.copy()
+                    # Confirm the exchange
+                    if exchange_tiles and len(scrabble.tile_bag) > 0:
+                        import random
+                        player = player1 if moves % 2 == 1 else player2
 
-                # clear highlights and inuse
-                highlight = [0] * 266
-                inuse = []
+                        for t in exchange_tiles:
+                            if t in player:
+                                player.remove(t)
 
-                print("PASS")
+                        for t in exchange_tiles:
+                            pos = random.randint(0, len(scrabble.tile_bag))
+                            scrabble.tile_bag.insert(pos, t)
+
+                        scrabble.gen_tiles(player, scrabble.tile_bag)
+                        print("Exchanged:", exchange_tiles)
+
+                        moves += 1
+                        original_board = current_board.copy()
+
+                        if moves % 2 == 1:
+                            temp_rack = player1.copy()
+                        else:
+                            temp_rack = player2.copy()
+
+                        highlight = [0] * 266
+                        inuse = []
+
+                    elif len(scrabble.tile_bag) == 0:
+                        print("Bag empty – cannot exchange")
+
+                    exchange_mode = False
+                    exchange_tiles = []
 
             return
 
+        # --- # cancels exchange mode, or passes turn normally ---
+        if key == '#':
+            if not key_lock:
+                key_lock = True
 
-        # arrow keys (movement)
+                if exchange_mode:
+                    exchange_mode = False
+                    exchange_tiles = []
+                    print("Exchange cancelled")
+                else:
+                    moves += 1
+                    original_board = current_board.copy()
+
+                    if moves % 2 == 1:
+                        temp_rack = player1.copy()
+                    else:
+                        temp_rack = player2.copy()
+
+                    highlight = [0] * 266
+                    inuse = []
+                    print("PASS")
+
+            return
+
+        # --- BACKSPACE: remove last queued tile in exchange mode, else normal ---
+        if py5.key == py5.BACKSPACE:
+            if exchange_mode:
+                if exchange_tiles:
+                    exchange_tiles.pop()
+                return
+
+            if 1 in highlight:
+                pos = highlight.index(1)
+                if current_board[pos] in inuse:
+                    removed = current_board[pos]
+                    current_board[pos] = 0
+                    temp_rack.append(removed)
+                    inuse.remove(removed)
+            return
+
+        # --- In exchange mode: typing a letter queues it ---
+        if exchange_mode:
+            if not key_lock:
+                key_lock = True
+                if (key in tiles
+                        and len(exchange_tiles) < 7
+                        and exchange_tiles.count(key) < tiles.count(key)):
+                    exchange_tiles.append(key)
+            return
+
+        # --- Normal play ---
+
         if py5.key == py5.CODED:
             if not key_lock:
                 if 1 in highlight:
@@ -165,7 +268,6 @@ def letter_enter(tiles):
                 key_lock = True
             return
 
-        # placing letters
         if key in tiles:
             if 1 in highlight and key in temp_rack:
                 pos = highlight.index(1)
@@ -182,19 +284,6 @@ def letter_enter(tiles):
                 inuse.append(key)
                 temp_rack.remove(key)
 
-        # BACKSPACE removes tile placed this turn
-        if py5.key == py5.BACKSPACE:
-            if 1 in highlight:
-                pos = highlight.index(1)
-
-                if current_board[pos] in inuse:
-                    removed = current_board[pos]
-                    current_board[pos] = 0
-                    temp_rack.append(removed)
-                    inuse.remove(removed)
-            return
-
-        # submitting the move
         if py5.key in ("RETURN", "\n"):
             if not enter_lock:
                 enter_lock = True
@@ -291,11 +380,11 @@ def turns(player):
     if (len(player) < 7) and (len(scrabble.tile_bag) != 0):
         scrabble.gen_tiles(player, scrabble.tile_bag)
 
-    if not inuse:
+    if not inuse and not exchange_mode:
         if temp_rack != player:
             temp_rack = player.copy()
 
-    show_tiles(player)
+    show_tiles(temp_rack)
     click()
     letter_enter(player)
     show_board()
@@ -303,15 +392,15 @@ def turns(player):
 
 def show_scores():
     global player1_score, player2_score
-    
+
     py5.fill("#0CAB07")
-    py5.rect(950,10,500,50)
+    py5.rect(950, 10, 500, 50)
     py5.fill("#3d10f5")
-    py5.rect(950,60,500,50)
-    
+    py5.rect(950, 60, 500, 50)
+
     py5.fill('#000000')
-    py5.text(player1_score,1175,55)
-    py5.text(player2_score,1175,105)
-    
-    
+    py5.text(player1_score, 1175, 55)
+    py5.text(player2_score, 1175, 105)
+
+
 py5.run_sketch()
