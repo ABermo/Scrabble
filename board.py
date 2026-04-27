@@ -288,7 +288,7 @@ def letter_enter(tiles):
             if not enter_lock:
                 enter_lock = True
 
-                if validation.valid(current_board):
+                if validation.valid(current_board, original_board):
 
                     points = scoring.score_move(original_board, current_board)
 

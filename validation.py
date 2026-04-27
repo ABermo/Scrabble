@@ -34,18 +34,110 @@ def word_matches_with_blanks(word, dictionary):
 
 
 # ---------------------------------------------------------
+#  HELPER: is a board position occupied?
+# ---------------------------------------------------------
+
+def is_tile(board, pos):
+    return board[pos] not in (0, 1)
+
+
+# ---------------------------------------------------------
+#  CONNECTIVITY CHECK (flood fill)
+#  All tiles on the board must form one connected group.
+# ---------------------------------------------------------
+
+def all_connected(board):
+    # Collect every occupied position
+    occupied = [pos for pos in range(1, 226) if is_tile(board, pos)]
+    if not occupied:
+        return True
+
+    # Flood fill from the first tile
+    visited = set()
+    stack = [occupied[0]]
+    while stack:
+        pos = stack.pop()
+        if pos in visited:
+            continue
+        visited.add(pos)
+        row = (pos - 1) // 15
+        col = (pos - 1) % 15
+        # up
+        if row > 0 and is_tile(board, pos - 15):
+            stack.append(pos - 15)
+        # down
+        if row < 14 and is_tile(board, pos + 15):
+            stack.append(pos + 15)
+        # left
+        if col > 0 and is_tile(board, pos - 1):
+            stack.append(pos - 1)
+        # right
+        if col < 14 and is_tile(board, pos + 1):
+            stack.append(pos + 1)
+
+    if len(visited) != len(occupied):
+        print("Disconnected tiles on board")
+        return False
+    return True
+
+
+# ---------------------------------------------------------
+#  STRAIGHT LINE CHECK
+#  New tiles must all be in the same row OR same column,
+#  and there must be no empty gaps between them.
+# ---------------------------------------------------------
+
+def in_straight_line(new_tiles, board):
+    if len(new_tiles) <= 1:
+        return True
+
+    rows = [(pos - 1) // 15 for pos in new_tiles]
+    cols = [(pos - 1) % 15 for pos in new_tiles]
+
+    if len(set(rows)) == 1:
+        # All in same row — check no empty gaps between min and max col
+        r = rows[0]
+        for c in range(min(cols), max(cols) + 1):
+            pos = r * 15 + c + 1
+            if not is_tile(board, pos):
+                print("Gap in row placement")
+                return False
+        return True
+
+    if len(set(cols)) == 1:
+        # All in same column — check no empty gaps between min and max row
+        c = cols[0]
+        for r in range(min(rows), max(rows) + 1):
+            pos = r * 15 + c + 1
+            if not is_tile(board, pos):
+                print("Gap in column placement")
+                return False
+        return True
+
+    print("Tiles not in a straight line")
+    return False
+
+
+# ---------------------------------------------------------
 #  MAIN VALIDATION FUNCTION
 # ---------------------------------------------------------
 
-def valid(board):
+def valid(board, original_board):
 
     # First move must cover center
     if board[113] in (0, 1):
         return False
 
-    # No isolated letters
-    if single_letter(board) == False:
-        print('Free standing Letter')
+    # Find tiles placed this turn
+    new_tiles = [pos for pos in range(1, 226)
+                 if original_board[pos] == 0 and is_tile(board, pos)]
+
+    # New tiles must be in a straight line with no gaps
+    if not in_straight_line(new_tiles, board):
+        return False
+
+    # All tiles on the board must form one connected body
+    if not all_connected(board):
         return False
 
     found_words = []
@@ -103,38 +195,4 @@ def valid(board):
             return False
 
     print("Valid:", found_words)
-    return True
-
-
-# ---------------------------------------------------------
-#  CHECK FOR ISOLATED LETTERS
-# ---------------------------------------------------------
-
-def single_letter(board):
-    box = 1
-    while box < 226:
-        if board[box] not in (0, 1):
-
-            row = (box - 1) // 15
-            col = (box - 1) % 15
-            touching = False
-
-            if row > 0:
-                if board[box - 15] not in (0, 1):
-                    touching = True
-            if row < 14:
-                if board[box + 15] not in (0, 1):
-                    touching = True
-            if col > 0:
-                if board[box - 1] not in (0, 1):
-                    touching = True
-            if col < 14:
-                if board[box + 1] not in (0, 1):
-                    touching = True
-
-            if touching == False:
-                return False
-
-        box += 1
-
     return True
